@@ -1,56 +1,45 @@
-ARG BASE_IMAGE=nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04
-FROM ${BASE_IMAGE}
-
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
-ENV LANG=C.UTF-8
-
-ARG INDEX_TTS_VERSION=1.5
-ARG MODEL_ID=""
-ARG HF_TOKEN=""
-ARG TORCH_WHEEL_URL=""         # Optional: direct wheel URL for torch matching desired CUDA (recommended)
-ARG TORCH_EXTRA_INDEX_URL=""   # Optional extra index (if using pip --extra-index-url)
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git wget ca-certificates build-essential ffmpeg curl unzip \
-    python3 python3-dev python3-venv python3-pip && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN python3 -m pip install --upgrade pip
+# 使用 RunPod 官方更先进的镜像: PyTorch 2.4, Python 3.11, CUDA 12.4.1
+FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
 
 WORKDIR /app
-COPY . /app
 
-# Install runtime dependencies (except torch/torchaudio by default)
-RUN pip install --no-cache-dir runpod huggingface-hub safetensors soundfile numpy==1.26.0 librosa ffmpeg-python
+# 1. 系统依赖 (IndexTTS 需要 espeak-ng, 编译 pynini 需要 openfst 等)
+# 增加 git-lfs 以防下载大文件需要
+RUN apt-get update && apt-get install -y \
+    git \
+    git-lfs \
+    ffmpeg \
+    espeak-ng \
+    cmake \
+    build-essential \
+    libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install the index-tts package in editable mode (expects repository files to be in /app)
-RUN pip install --no-cache-dir -e .
+# 2. 克隆仓库
+RUN git clone https://github.com/index-tts/index-tts.git /app/repo
 
-# Optional: install a specific torch wheel (pass TORCH_WHEEL_URL at build time).
-# Example build usage (replace URL with the correct wheel for your CUDA/torch version):
-#   docker build --build-arg TORCH_WHEEL_URL="https://download.pytorch.org/whl/cu128/torch-2.2.0+cu128-cp310-cp310-linux_x86_64.whl" ...
-RUN if [ -n "$TORCH_WHEEL_URL" ] ; then \
-      echo "[build] installing torch from wheel URL"; \
-      pip install --no-cache-dir "$TORCH_WHEEL_URL" ${TORCH_EXTRA_INDEX_URL:+--extra-index-url $TORCH_EXTRA_INDEX_URL}; \
-    else \
-      echo "[build] TORCH_WHEEL_URL empty; skipping torch install. You MUST install a torch+cu wheel compatible with your target GPU/CUDA at runtime or build time."; \
-    fi
+# 3. 安装依赖
+WORKDIR /app/repo
 
-# Optional: bake model snapshot during image build (pass MODEL_ID and HF_TOKEN as build-args).
-RUN if [ -n "$MODEL_ID" ] ; then \
-      python3 - <<PY
-from huggingface_hub import snapshot_download
-import os
-mid = os.environ.get("MODEL_ID")
-token = os.environ.get("HF_TOKEN") or None
-print("[build] downloading model snapshot:", mid)
-snapshot_download(repo_id=mid, local_dir="checkpoints", token=token)
-print("[build] model downloaded to checkpoints/")
-PY
-    else \
-      echo "[build] MODEL_ID empty; no model will be baked into image."; \
-    fi
+# 这一步非常关键：安装仓库自带依赖
+# IndexTTS 经常需要 pynini，这在 Linux 下 pip 安装通常没问题，但需要 build-essential (上面已装)
+RUN pip install --no-cache-dir -r requirements.txt
 
-EXPOSE 8080
-CMD ["python3", "runpod_serverless.py"]
+# 4. 安装 RunPod SDK 和其他必须库
+RUN pip install --no-cache-dir runpod scipy librosa soundfile
+
+# 5. 下载模型 (执行下载脚本)
+WORKDIR /app
+RUN mkdir -p /app/repo/checkpoints/1.5
+RUN mkdir -p /app/repo/checkpoints/2.0
+RUN huggingface-cli download IndexTeam/IndexTTS-1.5 --local-dir /app/repo/checkpoints/1.5--local-dir-use-symlinks False
+RUN huggingface-cli download IndexTeam/IndexTTS-2 --local-dir /app/repo/checkpoints/2.0--local-dir-use-symlinks False
+# 6. 复制处理脚本
+COPY handler.py /app/handler.py
+
+# 7. 环境变量设置 (防止 Python 输出缓冲)
+ENV PYTHONUNBUFFERED=1
+# 增加 PYTHONPATH 确保能导入 repo 里的模块
+ENV PYTHONPATH=/app/repo
+
+CMD [ "python", "-u", "/app/handler.py" ]
