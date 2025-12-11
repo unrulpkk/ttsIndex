@@ -1,0 +1,7 @@
+runpod
+huggingface-hub
+safetensors
+soundfile
+numpy==1.26.0
+librosa
+ffmpeg-python
