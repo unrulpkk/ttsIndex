@@ -26,8 +26,7 @@ WORKDIR /app/repo
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 4. 安装 RunPod SDK 和其他必须库
-RUN pip install --no-cache-dir runpod 
-#scipy librosa soundfile
+RUN pip install --no-cache-dir runpod scipy librosa soundfile
 
 # 5. 下载模型 (执行下载脚本)
 WORKDIR /app
