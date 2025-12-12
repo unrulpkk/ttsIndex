@@ -32,8 +32,9 @@ RUN pip install --no-cache-dir runpod scipy librosa soundfile
 WORKDIR /app
 RUN mkdir -p /app/repo/checkpoints/1.5
 RUN mkdir -p /app/repo/checkpoints/2.0
-RUN huggingface-cli download IndexTeam/IndexTTS-1.5 --local-dir /app/repo/checkpoints/1.5--local-dir-use-symlinks False
-RUN huggingface-cli download IndexTeam/IndexTTS-2 --local-dir /app/repo/checkpoints/2.0--local-dir-use-symlinks False
+RUN git clone https://huggingface.co/IndexTeam/IndexTTS-2 /app/repo/checkpoints/2.0
+#RUN huggingface-cli download IndexTeam/IndexTTS-1.5 --local-dir /app/repo/checkpoints/1.5--local-dir-use-symlinks False
+#RUN huggingface-cli download IndexTeam/IndexTTS-2 --local-dir /app/repo/checkpoints/2.0--local-dir-use-symlinks False
 # 6. 复制处理脚本
 COPY handler.py /app/handler.py
 
