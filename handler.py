@@ -6,11 +6,18 @@ import io
 import torch
 import soundfile as sf
 import runpod
-from index-tts.indextts.infer_v2 import IndexTTS2
+from indextts.infer_v2 import IndexTTS2
 
 # 将 repo 路径加入 python 路径，以便能 import 里面的模块
-sys.path.append('/app/repo')
-
+sys.path.append('/app/repo/index-tts')
+# 获取阿里云相关环境变量
+ALIYUN_ACCESS_KEY_ID = os.environ.get('ALIYUN_ACCESS_KEY_ID')
+ALIYUN_ACCESS_KEY_SECRET = os.environ.get('ALIYUN_ACCESS_KEY_SECRET')
+ALIYUN_ENDPOINT = os.environ.get('ALIYUN_ENDPOINT')
+ALIYUN_BUCKET_NAME = os.environ.get('ALIYUN_BUCKET_NAME')
+# 检查环境变量是否存在
+if not all([ALIYUN_ACCESS_KEY_ID, ALIYUN_ACCESS_KEY_SECRET, ALIYUN_ENDPOINT, ALIYUN_BUCKET_NAME]):
+    raise ValueError("Missing required environment variables for Aliyun OSS")
 # --- ⚠️ 这里需要根据 index-tts 的实际代码修改 ---
 # 假设 repo 里有一个 infer 模块或者 class
 # from inference import IndexTTS 
