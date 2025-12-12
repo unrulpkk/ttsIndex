@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
+RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 --no-cache-dir
 
 # 2. 克隆仓库
 RUN git clone https://github.com/index-tts/index-tts.git /app/repo
