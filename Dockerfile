@@ -26,13 +26,14 @@ WORKDIR /app/repo
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 4. 安装 RunPod SDK 和其他必须库
-RUN pip install --no-cache-dir runpod scipy librosa soundfile
+RUN pip install --no-cache-dir runpod 
+#scipy librosa soundfile
 
 # 5. 下载模型 (执行下载脚本)
 WORKDIR /app
-RUN mkdir -p /app/repo/checkpoints/1.5
-RUN mkdir -p /app/repo/checkpoints/2.0
-RUN git clone https://huggingface.co/IndexTeam/IndexTTS-2 /app/repo/checkpoints/2.0
+#RUN mkdir -p /app/repo/checkpoints/1.5
+#RUN mkdir -p /app/repo/checkpoints/2.0
+#RUN git clone https://huggingface.co/IndexTeam/IndexTTS-2 /app/repo/checkpoints/2.0
 #RUN huggingface-cli download IndexTeam/IndexTTS-1.5 --local-dir /app/repo/checkpoints/1.5--local-dir-use-symlinks False
 #RUN huggingface-cli download IndexTeam/IndexTTS-2 --local-dir /app/repo/checkpoints/2.0--local-dir-use-symlinks False
 # 6. 复制处理脚本
